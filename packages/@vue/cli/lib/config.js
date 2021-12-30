@@ -4,6 +4,7 @@ const homedir = require('os').homedir()
 const { get, set, unset, error, launch } = require('@vue/cli-shared-utils')
 
 async function configure (value, options) {
+  console.log(value, typeof (value), 'sdsd')
   const file = path.resolve(homedir, '.vuerc')
   const config = await fs.readJson(file)
 
@@ -21,6 +22,7 @@ async function configure (value, options) {
   if (options.get) {
     // eslint-disable-next-line no-shadow
     const value = get(config, options.get)
+
     if (options.json) {
       console.log(JSON.stringify({
         value

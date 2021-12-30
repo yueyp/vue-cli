@@ -44,7 +44,7 @@ class GeneratorAPI {
     this.generator = generator
     this.options = options
     this.rootOptions = rootOptions
-
+    // 找到npm包得名称和地址
     /* eslint-disable no-shadow */
     this.pluginsData = generator.plugins
       .filter(({ id }) => id !== `@vue/cli-service`)
@@ -338,6 +338,7 @@ class GeneratorAPI {
    *
    * @param {function} cb
    */
+  // 所有文件都写在磁盘后执行得遍历回调
   onCreateComplete (cb) {
     this.afterInvoke(cb)
   }

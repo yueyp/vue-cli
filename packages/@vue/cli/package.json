@@ -3,7 +3,7 @@
   "version": "5.0.0-rc.1",
   "description": "Command line interface for rapid Vue.js development",
   "bin": {
-    "vue": "bin/vue.js"
+    "myvue": "bin/vue.js"
   },
   "types": "types/index.d.ts",
   "repository": {

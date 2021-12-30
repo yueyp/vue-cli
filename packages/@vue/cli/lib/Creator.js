@@ -51,10 +51,11 @@ module.exports = class Creator extends EventEmitter {
 
     this.name = name
     this.context = process.env.VUE_CLI_CONTEXT = context
+    // 获取了 presetPrompt list，在初始化项目的时候提供选择
     const { presetPrompt, featurePrompt } = this.resolveIntroPrompts()
-
     this.presetPrompt = presetPrompt
     this.featurePrompt = featurePrompt
+    // 存放项目配置的文件（package.json || congfig.js） 以及是否将 presetPrompts 存放起来
     this.outroPrompts = this.resolveOutroPrompts()
     this.injectedPrompts = []
     this.promptCompleteCbs = []
@@ -64,6 +65,12 @@ module.exports = class Creator extends EventEmitter {
     this.run = this.run.bind(this)
 
     const promptAPI = new PromptModuleAPI(this)
+    /**
+     * 1. 将 babel, e2e, pwa 等 push 到 featurePrompt.choices 中，在选择项目需要配置哪些时显示出来 （checkbox）；
+     * 2. 将 babel, e2e, pwa 等 push 到 injectedPrompts 中，当设置了 feature 会对应通过 Prompts 来进一步选择哪种模式，比如当选择了 E2E Testing ，然后会再次让你
+     *    选择哪种 E2E Testing，即， Cypress (Chrome only) ||  Nightwatch (Selenium-based)；
+     * 3. 将每中 feature 的 onPromptComplete push 到 promptCompleteCbs，在后面会根据选择的配置来安装对应的 plugin。
+     */
     promptModules.forEach(m => m(promptAPI))
   }
 
@@ -73,12 +80,15 @@ module.exports = class Creator extends EventEmitter {
 
     if (!preset) {
       if (cliOptions.preset) {
+        // 使用传进来的预设选项
         // vue create foo --preset bar
         preset = await this.resolvePreset(cliOptions.preset, cliOptions.clone)
       } else if (cliOptions.default) {
+        // 使用默认的预设选项
         // vue create foo --default
         preset = defaults.presets.default
       } else if (cliOptions.inlinePreset) {
+        // 使用内联的JSON字符串预设选项
         // vue create foo --inlinePreset {...}
         try {
           preset = JSON.parse(cliOptions.inlinePreset)
@@ -87,6 +97,7 @@ module.exports = class Creator extends EventEmitter {
           exit(1)
         }
       } else {
+        // promptAndResolvePreset 函数利用 inquirer.prompt 以命令后交互的形式来获取 preset
         preset = await this.promptAndResolvePreset()
       }
     }
@@ -140,6 +151,7 @@ module.exports = class Creator extends EventEmitter {
       devDependencies: {},
       ...resolvePkg(context)
     }
+    // 获取最新CLI(包含插件)的版本
     const deps = Object.keys(preset.plugins)
     deps.forEach(dep => {
       if (preset.plugins[dep]._isPreset) {
@@ -159,6 +171,7 @@ module.exports = class Creator extends EventEmitter {
       pkg.devDependencies[dep] = version
     })
 
+    // 生成package.json
     // write package.json
     await writeFileTree(context, {
       'package.json': JSON.stringify(pkg, null, 2)
@@ -177,6 +190,7 @@ module.exports = class Creator extends EventEmitter {
 
     // intilaize git repository before installing deps
     // so that vue-cli-service can setup git hooks.
+    // 判断是否需要初始化git
     const shouldInitGit = this.shouldInitGit(cliOptions)
     if (shouldInitGit) {
       log(`🗃  Initializing git repository...`)
@@ -297,6 +311,7 @@ module.exports = class Creator extends EventEmitter {
     }
 
     let preset
+    // 如果是选择使用本地保存的 preset (~/.vuerc)
     if (answers.preset && answers.preset !== '__manual__') {
       preset = await this.resolvePreset(answers.preset)
     } else {
@@ -507,8 +522,18 @@ module.exports = class Creator extends EventEmitter {
     return outroPrompts
   }
 
+  /**
+   * presetPrompt： 预设选项 prompt，当上次以 Manually 模式进行了预设选项，并且保存到了 ~/.vuerc 中，那么在初始化项目时就会列出已经保存的 preset，并提供选择。
+    featurePrompt：项目的一些 feature，就是选择 babel，typescript，pwa，router，vuex，cssPreprocessors，linter，unit，e2e。
+    injectedPrompts：当选择了 feature 后，就会为对应的 feature 注入 prompts，比如你选择了 unit，那么就会让你选择模式： Mocha + Chai 还是 Jest
+    outroPrompts： 其他的 prompt，包含：
+    将 Babel, PostCSS, ESLint 等等的配置文件存放在 package.json 中还是存放在 config 文件中；
+    是否需要将这次设置的 preset 保存到本地，如果需要则会进一步让你输入名称进行保存；
+    安装依赖是选择 npm 还是 yarn。
+  */
   resolveFinalPrompts () {
     // patch generator-injected prompts to only show in manual mode
+    // 将所有的 Prompt 合并，包含 preset，feature，injected，outro，只有当选择了手动模式的时候才会显示 injectedPrompts
     this.injectedPrompts.forEach(prompt => {
       const originalWhen = prompt.when || (() => true)
       prompt.when = answers => {
@@ -527,6 +552,7 @@ module.exports = class Creator extends EventEmitter {
   }
 
   shouldInitGit (cliOptions) {
+    // 没有安装git
     if (!hasGit()) {
       return false
     }
@@ -538,6 +564,7 @@ module.exports = class Creator extends EventEmitter {
     if (cliOptions.git === false || cliOptions.git === 'false') {
       return false
     }
+    // 生成项目的目录是否已经含有git
     // default: true unless already in a git repo
     return !hasProjectGit(this.context)
   }

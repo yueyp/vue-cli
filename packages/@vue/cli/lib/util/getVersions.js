@@ -9,8 +9,10 @@ module.exports = async function getVersions () {
   if (sessionCached) {
     return sessionCached
   }
-
+  // latest、local用于判断@vue/cli是否需要更新以及初始化项目中相关插件的版本
+  // 远程CLI以及插件的版本
   let latest
+  // 本地CLI以及插件的版本
   const local = require(`../../package.json`).version
   if (process.env.VUE_CLI_TEST || process.env.VUE_CLI_DEBUG) {
     return (sessionCached = {
@@ -68,6 +70,12 @@ module.exports = async function getVersions () {
     error
   })
 }
+
+/**
+ * 取 CLI 的版本并不是直接获取， 而是通过 vue-cli-version-marker npm 包获取的 CLI 版本，为什么会这样做，主要原因有两点：
+ * 1、vue-cli 从 3.0（@vue/cli） 开始就放在了 @vue 下面，即是一个 scoped package, 而 scoped package 又不支持通过 npm registry 来获取 latest 版本信息。比如 vue-cli-version-marker/latest可以正常访问，而 @vue/cli/latest 则不可以。
+ * 2、获取 scoped packages 的数据比获取 unscoped package 通常要慢 300ms。
+ * */
 
 // fetch the latest version and save it on disk
 // so that it is available immediately next time

@@ -7,6 +7,7 @@ const { chalk, semver } = require('@vue/cli-shared-utils')
 const requiredVersion = require('../package.json').engines.node
 const leven = require('leven')
 
+console.log('我加载啦')
 function checkNodeVersion (wanted, id) {
   if (!semver.satisfies(process.version, wanted, { includePrerelease: true })) {
     console.log(chalk.red(

@@ -119,8 +119,11 @@ module.exports = class Generator {
     this.rootOptions = {}
     this.afterInvokeCbs = afterInvokeCbs
     this.afterAnyInvokeCbs = afterAnyInvokeCbs
+    // 插件通过 GeneratorAPI 暴露的 addConfigTransform 方法添加如何提取配置文件
     this.configTransforms = {}
+    // 默认的配置文件
     this.defaultConfigTransforms = defaultConfigTransforms
+    // 保留的配置文件 vue.config.js
     this.reservedConfigTransforms = reservedConfigTransforms
     this.invoking = invoking
     // for conflict resolution
@@ -155,6 +158,7 @@ module.exports = class Generator {
     const passedAfterInvokeCbs = this.afterInvokeCbs
     this.afterInvokeCbs = []
     // apply hooks from all plugins to collect 'afterAnyHooks'
+    // 每个插件对应生成一个 GeneratorAPI 实例，并将实例 api 传入插件暴露出来的 generator 函数
     for (const plugin of this.allPlugins) {
       const { id, apply } = plugin
       const api = new GeneratorAPI(id, this, {}, rootOptions)
@@ -209,6 +213,10 @@ module.exports = class Generator {
     await writeFileTree(this.context, this.files, initialFiles, this.filesModifyRecord)
   }
 
+  /**
+   * 提取配置文件
+   * 提取配置文件指的是将一些插件（比如 eslint，babel）的配置从 package.json 的字段中提取到专属的配置文件中
+   * */
   extractConfigFiles (extractAll, checkExisting) {
     const configTransforms = Object.assign({},
       defaultConfigTransforms,
@@ -251,6 +259,7 @@ module.exports = class Generator {
     }
   }
 
+  // 对package.json文件进行了排序
   sortPkg () {
     // ensure package.json keys has readable order
     this.pkg.dependencies = sortObject(this.pkg.dependencies)
@@ -304,8 +313,10 @@ module.exports = class Generator {
     return sortPlugins(allPlugins)
   }
 
+  // 模板渲染
   async resolveFiles () {
     const files = this.files
+    // fileMiddlewares里包含了ejs render函数
     for (const middleware of this.fileMiddlewares) {
       await middleware(files, ejs.render)
     }
@@ -343,6 +354,7 @@ module.exports = class Generator {
     debug('vue:cli-files')(this.files)
   }
 
+  // 判断项目中是否有某个插件
   hasPlugin (id, versionRange) {
     const pluginExists = [
       ...this.plugins.map(p => p.id),

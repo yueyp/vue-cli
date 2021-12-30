@@ -11,12 +11,15 @@ async function create (projectName, options) {
   if (options.proxy) {
     process.env.HTTP_PROXY = options.proxy
   }
-
+  // 获取当前目录
   const cwd = options.cwd || process.cwd()
+  // 如果项目名称为"."
   const inCurrent = projectName === '.'
+  // 如果项目名称为".",则取名称为上一级目录的名字，否则则取输入的项目名字
   const name = inCurrent ? path.relative('../', cwd) : projectName
+  // 项目存放目录
   const targetDir = path.resolve(cwd, projectName || '.')
-
+  // 判断项目名称是否符合要求
   const result = validateProjectName(name)
   if (!result.validForNewPackages) {
     console.error(chalk.red(`Invalid project name: "${name}"`))
@@ -28,12 +31,15 @@ async function create (projectName, options) {
     })
     exit(1)
   }
-
+  // 如果当前目录存在,并且输入的选项中没有合并参数
   if (fs.existsSync(targetDir) && !options.merge) {
+    // 强制覆盖
     if (options.force) {
       await fs.remove(targetDir)
     } else {
+      // 清除了打印信息
       await clearConsole()
+      // 如果是当前目录,提示是否创建新的项目到当前目录
       if (inCurrent) {
         const { ok } = await inquirer.prompt([
           {
@@ -46,6 +52,7 @@ async function create (projectName, options) {
           return
         }
       } else {
+        // 如果已有同名项目,选择覆盖\合并或者取消
         const { action } = await inquirer.prompt([
           {
             name: 'action',
@@ -61,6 +68,7 @@ async function create (projectName, options) {
         if (!action) {
           return
         } else if (action === 'overwrite') {
+          // 用户选择了重写
           console.log(`\nRemoving ${chalk.cyan(targetDir)}...`)
           await fs.remove(targetDir)
         }
@@ -68,6 +76,8 @@ async function create (projectName, options) {
     }
   }
 
+  // 新建一个创建项目的类
+  // getPromptModules() 获取了 babel，typescript，pwa，router，vuex， cssPreprocessors，linter，unit，e2e 的 Prompt 的配置信息
   const creator = new Creator(name, targetDir, getPromptModules())
   await creator.create(options)
 }
